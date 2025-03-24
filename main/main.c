@@ -8,10 +8,12 @@
 #include "nvs_handle.h"
 #include "wifi_handler.h"
 
+#include "read_sensor.h"
 void app_main(void)
 {
     nvs_init();
     wifi_start();
     vTaskDelay(1000 / portTICK_PERIOD_MS);
     http_server_configure();
+    init_sensors();  // Khởi tạo cảm biến và bắt đầu task đọc dữ liệu
 }

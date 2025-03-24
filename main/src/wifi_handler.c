@@ -90,10 +90,12 @@ void wifi_init_sta()
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
 
     // Đăng ký các sự kiện cho WiFi và IP
+
 }
 
 void wifi_init_softap(void)
 {
+    
     esp_netif_ap = esp_netif_create_default_wifi_ap();
     assert(esp_netif_ap);
 
@@ -130,6 +132,7 @@ void wifi_init_softap(void)
 
 void wifi_start()
 {
+    
     // Thiết lập chế độ hỗn hợp (APSTA) cho WiFi
     s_wifi_event_group = xEventGroupCreate();
     ESP_ERROR_CHECK(esp_netif_init());
