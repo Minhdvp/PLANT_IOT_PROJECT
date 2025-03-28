@@ -10,18 +10,14 @@
 
 // Task đọc dữ liệu cảm biến và ghi lên Firebase
 void sensor_task(void *pvParameters) {
-    
     while (1) {
-
         float temperature = -1;
         float humidity = -1;
         int soil_moisture = -1;
 
         // Đọc dữ liệu từ AHT20
         aht20_read(&temperature, &humidity);
-        if (temperature >= -40 && temperature <= 85 && humidity >= 0 && humidity <= 100) {
-            printf("Temperature: %.2f °C, Humidity: %.2f %%\n", temperature, humidity);
-        } else {
+        if (!(temperature >= -40 && temperature <= 85 && humidity >= 0 && humidity <= 100)) {
             printf("[Sensor] AHT20 -> No sensor signal detected!\n");
             temperature = -1;
             humidity = -1;
@@ -29,39 +25,29 @@ void sensor_task(void *pvParameters) {
 
         // Đọc dữ liệu từ Soil Moisture
         soil_moisture = get_soil_moisture();
-        if (soil_moisture >= 0 && soil_moisture <= 1023) {
-            printf("Soil Moisture: %d\n", soil_moisture);
-        } else {
+        if (!(soil_moisture >= 0 && soil_moisture <= 1023)) {
             printf("[Sensor] Soil Moisture -> No sensor signal detected!\n");
             soil_moisture = -1;
         }
 
-        // Ghi dữ liệu lên Firebase nếu hợp lệ
+        // Chỉ ghi lên Firebase nếu dữ liệu hợp lệ
         if (temperature != -1 && humidity != -1 && soil_moisture != -1) {
-            char data_json[256];
+            char data_json[512];
 
-            // Ghi nhiệt độ
-            snprintf(data_json, sizeof(data_json), "{\"value\": %.2f}", temperature);
-            if (firebase_write("/Sensor/Temperature", data_json) == ESP_OK) {
-                printf("[Firebase] Temperature sent successfully: %.2f °C\n", temperature);
-            } else {
-                printf("[Firebase] Failed to send temperature data!\n");
-            }
+            // Tạo một JSON chứa tất cả dữ liệu
+            snprintf(data_json, sizeof(data_json),
+                     "{"
+                     "\"Temperature\": %.2f,"
+                     "\"Humidity\": %.2f,"
+                     "\"SoilMoisture\": %d"
+                     "}",
+                     temperature, humidity, soil_moisture);
 
-            // Ghi độ ẩm không khí
-            snprintf(data_json, sizeof(data_json), "{\"value\": %.2f}", humidity);
-            if (firebase_write("/Sensor/Humidity", data_json) == ESP_OK) {
-                printf("[Firebase] Humidity sent successfully: %.2f %%\n", humidity);
+            // Gửi một lần lên Firebase
+            if (firebase_write("/SensorData", data_json) == ESP_OK) {
+                printf("[Firebase] Data sent successfully: %s\n", data_json);
             } else {
-                printf("[Firebase] Failed to send humidity data!\n");
-            }
-
-            // Ghi độ ẩm đất
-            snprintf(data_json, sizeof(data_json), "{\"value\": %d}", soil_moisture);
-            if (firebase_write("/SoilSensor/SoilHumidity", data_json) == ESP_OK) {
-                printf("[Firebase] Soil Moisture sent successfully: %d\n", soil_moisture);
-            } else {
-                printf("[Firebase] Failed to send soil moisture data!\n");
+                printf("[Firebase] Failed to send sensor data!\n");
             }
         } else {
             printf("[Warning] Invalid sensor data, skipping Firebase update.\n");
@@ -71,6 +57,7 @@ void sensor_task(void *pvParameters) {
         vTaskDelay(2000 / portTICK_PERIOD_MS);  // Delay 2 giây
     }
 }
+
 
 // Hàm khởi tạo và bắt đầu task đọc cảm biến
 void init_sensors() {

@@ -3,7 +3,7 @@
 #include "esp_log.h"
 
 static const char *TAG = "SOIL_MOISTURE";
-#define SOIL_MOISTURE_ADC_CHANNEL ADC1_CHANNEL_0  // GPIO36
+#define SOIL_MOISTURE_ADC_CHANNEL ADC2_CHANNEL_0  // GPIO36
 
 void soil_moisture_init() {
     adc1_config_width(ADC_WIDTH_BIT_12);
