@@ -16,7 +16,7 @@ void sensor_task(void *pvParameters) {
         int soil_moisture = -1;
 
         // Đọc dữ liệu từ AHT20
-        aht20_read(&temperature, &humidity);
+        aht20_get_temp_humidity(&temperature, &humidity);
         if (!(temperature >= -40 && temperature <= 85 && humidity >= 0 && humidity <= 100)) {
             printf("[Sensor] AHT20 -> No sensor signal detected!\n");
             temperature = -1;
@@ -25,7 +25,7 @@ void sensor_task(void *pvParameters) {
 
         // Đọc dữ liệu từ Soil Moisture
         soil_moisture = get_soil_moisture();
-        if (!(soil_moisture >= 0 && soil_moisture <= 1023)) {
+        if (!(soil_moisture >= 0 && soil_moisture <= 4095)) {
             printf("[Sensor] Soil Moisture -> No sensor signal detected!\n");
             soil_moisture = -1;
         }
