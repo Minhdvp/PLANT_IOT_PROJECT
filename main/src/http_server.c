@@ -14,6 +14,7 @@
 #include "nvs_handle.h"
 
 #include "wifi_handler.h"
+#include "esp_wifi.h"
 
 static const char *TAG = "HTTP_HANDLE";
 
@@ -72,15 +73,42 @@ esp_err_t connect_post_handler(httpd_req_t *req)
     {
         ESP_LOGI(TAG, "Received SSID: %s", ssid->valuestring);
         ESP_LOGI(TAG, "Received Password: %s", password->valuestring);
+
+        // Lưu cấu hình WiFi
         if (save_wifi_config(ssid->valuestring, password->valuestring) == ESP_OK)
         {
-            ESP_LOGI(TAG, "Wi-Fi save successfully.");
-            esp_restart();
+            ESP_LOGI(TAG, "Wi-Fi config saved successfully.");
+
+            // Kết nối với WiFi mới
+            ESP_ERROR_CHECK(esp_wifi_stop());
+
+            wifi_config_t wifi_config = {
+                .sta = {
+                    .threshold.authmode = WIFI_AUTH_WPA2_PSK,
+                    .pmf_cfg = {
+                        .capable = true,
+                        .required = false},
+                },
+            };
+
+            // Sao chép SSID và password mới
+            strncpy((char *)wifi_config.sta.ssid, ssid->valuestring, sizeof(wifi_config.sta.ssid) - 1);
+            wifi_config.sta.ssid[sizeof(wifi_config.sta.ssid) - 1] = '\0';
+
+            strncpy((char *)wifi_config.sta.password, password->valuestring, sizeof(wifi_config.sta.password) - 1);
+            wifi_config.sta.password[sizeof(wifi_config.sta.password) - 1] = '\0';
+
+            // Cấu hình và kết nối lại WiFi
+            ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+            ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+            ESP_ERROR_CHECK(esp_wifi_start());
+
+            httpd_resp_sendstr(req, "{\"status\":\"connecting\",\"message\":\"Connecting to new Wi-Fi network\"}");
         }
         else
         {
-            ESP_LOGE(TAG, "Failed to connect Wi-Fi.");
-            httpd_resp_sendstr(req, "Connection failed");
+            ESP_LOGE(TAG, "Failed to save Wi-Fi config.");
+            httpd_resp_sendstr(req, "{\"status\":\"error\",\"message\":\"Failed to save Wi-Fi configuration\"}");
         }
     }
 

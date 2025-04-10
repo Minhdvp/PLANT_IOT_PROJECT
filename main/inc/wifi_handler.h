@@ -5,9 +5,6 @@
 #define WIFI_FAIL_BIT BIT1
 #define WIFI_DISCONNECTED_BIT BIT2
 
-#define WIFI_SSID "S20 FE"
-#define WIFI_PASS "25102004"
-
 #define WIFI_AP_SSID "ESP32_AP"          // AP name
 #define WIFI_AP_PASSWORD "25102004"      // AP password
 #define WIFI_AP_CHANNEL 1                // AP channel

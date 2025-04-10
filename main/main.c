@@ -4,16 +4,18 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#include "http_server.h"
 #include "nvs_handle.h"
 #include "wifi_handler.h"
-
+#include "sys_config.h"
 #include "read_sensor.h"
+
+#include "mesh_handler.h"
+
 void app_main(void)
 {
     nvs_init();
+
     wifi_start();
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-    http_server_configure();
-    init_sensors();  // Khởi tạo cảm biến và bắt đầu task đọc dữ liệu
+
+    mesh_app_start();
 }
