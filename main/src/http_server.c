@@ -103,6 +103,7 @@ esp_err_t connect_post_handler(httpd_req_t *req)
             ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
             ESP_ERROR_CHECK(esp_wifi_start());
 
+            ESP_LOGE(TAG, "Success to save Wi-Fi config.");
             httpd_resp_sendstr(req, "{\"status\":\"connecting\",\"message\":\"Connecting to new Wi-Fi network\"}");
         }
         else

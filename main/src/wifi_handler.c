@@ -14,7 +14,7 @@
 #include "wifi_handler.h"
 #include "nvs_handle.h"
 #include "mesh_handler.h"
-
+#include "sys_config.h"
 #include "espNow_handler.h"
 
 #include "http_server.h"
@@ -33,12 +33,15 @@ esp_netif_t *esp_netif_ap = NULL;
 EventGroupHandle_t s_wifi_event_group;
 
 uint8_t retryTime = 0;
-#define MAX_RETRY_TIMES 4
+#define MAX_RETRY_TIMES 3
 
 bool is_wifi_connect;
 
 // Thêm biến cờ để theo dõi trạng thái SoftAP
 bool softap_active = false;
+
+esp_event_handler_instance_t instance_any_id;
+esp_event_handler_instance_t instance_got_ip;
 
 static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
@@ -50,12 +53,11 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         break;
 
     case WIFI_EVENT_STA_DISCONNECTED:
-        ESP_LOGI(TAG_WIFI, "Disconnected from AP, retry: %d/%d", retryTime, MAX_RETRY_TIMES);
 
         if (retryTime++ < MAX_RETRY_TIMES)
         {
+            ESP_LOGI(TAG_WIFI, "Disconnected from AP, retry: %d/%d", retryTime, MAX_RETRY_TIMES);
             esp_wifi_connect();
-            ESP_LOGI(TAG_WIFI, "Retrying to connect to the AP");
         }
         else
         {
@@ -66,9 +68,9 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
                 ESP_LOGI(TAG_WIFI, "Failed to connect to AP, starting SoftAP mode");
                 softap_active = true; // Đánh dấu rằng SoftAP đã được kích hoạt
                 ESP_ERROR_CHECK(esp_wifi_stop());
-                esp_wifi_set_mode(WIFI_MODE_APSTA);
-                wifi_init_softap(); // Khởi tạo SoftAP
-                esp_wifi_start();   // Bắt đầu WiFi
+                esp_wifi_set_mode(WIFI_MODE_AP);
+                wifi_init_softap();
+                esp_wifi_start(); // Bắt đầu WiFi
             }
             else
             {
@@ -81,7 +83,11 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
     case WIFI_EVENT_STA_CONNECTED:
         ESP_LOGI(TAG_WIFI, "Connected to AP");
         break;
-
+    case WIFI_EVENT_STA_STOP:
+        ESP_LOGI(TAG_WIFI, "ESP32 STA Stop.");
+        if (!softap_active)
+            retryTime = 0;
+        break;
     case IP_EVENT_STA_GOT_IP:
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
         ESP_LOGI(TAG_WIFI, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
@@ -100,6 +106,10 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
 
             softap_active = false;
         }
+        break;
+    case WIFI_EVENT_AP_STOP:
+        ESP_LOGI(TAG_WIFI, "ESP32 SoftAP Disconnect.");
+        softap_active = false;
         break;
 
     case WIFI_EVENT_AP_STACONNECTED:
@@ -160,6 +170,12 @@ void wifi_init_sta()
 void wifi_init_softap(void)
 {
 
+    if (esp_netif_ap != NULL)
+    {
+        esp_netif_destroy(esp_netif_ap);
+        esp_netif_ap = NULL;
+    }
+
     esp_netif_ap = esp_netif_create_default_wifi_ap();
     assert(esp_netif_ap);
 
@@ -214,8 +230,6 @@ void wifi_start()
     // Khởi tạo softap sẽ được gọi sau nếu cần thiết trong event handler
 
     // Đăng ký các event handler
-    esp_event_handler_instance_t instance_any_id;
-    esp_event_handler_instance_t instance_got_ip;
 
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
                                                         ESP_EVENT_ANY_ID,
@@ -231,13 +245,15 @@ void wifi_start()
     // Bắt đầu WiFi
     ESP_ERROR_CHECK(esp_wifi_start());
 
-    // EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
-    //                                        WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
-    //                                        pdFALSE,
-    //                                        pdFALSE,
-    //                                        portMAX_DELAY);
-
-    // ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
-    // ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
-    // vEventGroupDelete(s_wifi_event_group);
+    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
+                                           WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+                                           pdFALSE,
+                                           pdFALSE,
+                                           portMAX_DELAY);
+}
+void disible_event()
+{
+    ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
+    ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
+    vEventGroupDelete(s_wifi_event_group);
 }

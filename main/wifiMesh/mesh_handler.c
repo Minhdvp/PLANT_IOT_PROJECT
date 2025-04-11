@@ -61,6 +61,12 @@ void mesh_event_handler(void *arg, esp_event_base_t event_base,
         mesh_layer = esp_mesh_get_layer();
     }
     break;
+    case MESH_EVENT_PARENT_DISCONNECTED:
+    {
+
+        ESP_LOGI(TAG, "<MESH_EVENT_PARENT_DISCONNECTED>");
+    }
+    break;
     case MESH_EVENT_STOPPED:
     {
         ESP_LOGI(TAG, "<MESH_EVENT_STOPPED>");

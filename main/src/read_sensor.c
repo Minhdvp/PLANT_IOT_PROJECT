@@ -15,6 +15,7 @@ static const char *TAG = "SENSOR_TASK";
 // Task đọc dữ liệu cảm biến và ghi lên Firebase
 void sensor_task(void *pvParameters)
 {
+    PotState_t pot_state;
     while (1)
     {
         float temperature = -1;
@@ -39,9 +40,12 @@ void sensor_task(void *pvParameters)
         }
 
         // Chỉ ghi lên Firebase nếu dữ liệu hợp lệ
+        temperature = 30;
+        humidity = 50;
+        soil_moisture = 500;
         if (temperature != -1 && humidity != -1 && soil_moisture != -1)
         {
-            PotState_t pot_state;
+
             pot_state.temperature = temperature;
             pot_state.humidity = humidity;
             pot_state.soil_moisture = soil_moisture;

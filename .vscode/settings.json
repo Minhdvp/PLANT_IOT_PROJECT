@@ -14,6 +14,8 @@
     "nvs_handle.h": "c",
     "esp_mesh.h": "c",
     "esp_mac.h": "c",
-    "task.h": "c"
+    "task.h": "c",
+    "read_sensor.h": "c",
+    "sys_config.h": "c"
   }
 }
