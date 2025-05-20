@@ -85,3 +85,74 @@ esp_err_t firebase_write(const char *path, const char *data) {
     return err;
 }
 
+esp_err_t firebase_post(const char *path, const char *data) {
+    wifi_ap_record_t ap_info;
+    if (esp_wifi_sta_get_ap_info(&ap_info) != ESP_OK) {
+        ESP_LOGE(TAG, "WiFi không kết nối!");
+        return ESP_FAIL;
+    }
+
+    char url[512];
+    snprintf(url, sizeof(url), "%s%s.json?auth=%s", firebase_database_url, path, firebase_api_key);
+
+    extern const uint8_t firebase_cert_pem_start[] asm("_binary_firebase_cert_pem_start");
+    esp_http_client_config_t config = {
+        .url = url,
+        .method = HTTP_METHOD_POST,
+        .cert_pem = (const char *)firebase_cert_pem_start,
+        .timeout_ms = 10000
+    };
+
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    if (client == NULL) {
+        ESP_LOGE(TAG, "Không thể khởi tạo HTTP client!");
+        return ESP_FAIL;
+    }
+
+    esp_http_client_set_header(client, "Content-Type", "application/json");
+    esp_err_t err = esp_http_client_open(client, strlen(data));
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Lỗi mở kết nối HTTP: %s", esp_err_to_name(err));
+        esp_http_client_cleanup(client);
+        return err;
+    }
+
+    int written_len = esp_http_client_write(client, data, strlen(data));
+    if (written_len <= 0) {
+        ESP_LOGE(TAG, "Lỗi ghi dữ liệu lên Firebase");
+        esp_http_client_close(client);
+        esp_http_client_cleanup(client);
+        return ESP_FAIL;
+    }
+
+    // Thực hiện yêu cầu và đọc phản hồi
+    err = esp_http_client_perform(client);
+    if (err == ESP_OK && esp_http_client_get_status_code(client) == 200) {
+        ESP_LOGI(TAG, "Dữ liệu được gửi lên Firebase: %s -> %s", path, data);
+
+        // Đọc phản hồi để lấy push ID
+        char response_buffer[512] = {0};
+        int content_length = esp_http_client_get_content_length(client);
+        if (content_length > 0 && content_length < sizeof(response_buffer)) {
+            int read_len = esp_http_client_read(client, response_buffer, content_length);
+            if (read_len > 0) {
+                response_buffer[read_len] = '\0';
+                cJSON *response_json = cJSON_Parse(response_buffer);
+                if (response_json) {
+                    cJSON *name = cJSON_GetObjectItem(response_json, "name");
+                    if (name && cJSON_IsString(name)) {
+                        ESP_LOGI(TAG, "Node mới được tạo với push ID: %s", name->valuestring);
+                    }
+                    cJSON_Delete(response_json);
+                }
+            }
+        }
+    } else {
+        ESP_LOGE(TAG, "Lỗi gửi dữ liệu! Mã HTTP: %d, Lỗi: %s",
+                 esp_http_client_get_status_code(client), esp_err_to_name(err));
+    }
+
+    esp_http_client_close(client);
+    esp_http_client_cleanup(client);
+    return err;
+}

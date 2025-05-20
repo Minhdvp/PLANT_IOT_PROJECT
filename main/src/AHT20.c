@@ -29,20 +29,41 @@ void aht20_init() {
 }
 
 void aht20_read(float *temperature, float *humidity) {
-    uint8_t cmd = 0xAC;
+    uint8_t cmd[3] = {0xAC, 0x33, 0x00};  // Lệnh trigger đo
     uint8_t data[6] = {0};
 
-    i2c_master_write_to_device(I2C_MASTER_NUM, AHT20_ADDR, &cmd, 1, 1000 / portTICK_PERIOD_MS);
-    vTaskDelay(50 / portTICK_PERIOD_MS);  // Wait for data to be ready
+    // Gửi lệnh đo
+    if (i2c_master_write_to_device(I2C_MASTER_NUM, AHT20_ADDR, cmd, 3, 1000 / portTICK_PERIOD_MS) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to send measurement command to AHT20");
+        return;
+    }
 
-    i2c_master_read_from_device(I2C_MASTER_NUM, AHT20_ADDR, data, 6, 1000 / portTICK_PERIOD_MS);
+    // Chờ cảm biến sẵn sàng
+    do {
+        if (i2c_master_read_from_device(I2C_MASTER_NUM, AHT20_ADDR, data, 1, 1000 / portTICK_PERIOD_MS) != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to read status byte from AHT20");
+            return;
+        }
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    } while (data[0] & 0x80);  // Bit 7 = busy
 
-    uint32_t hum = (data[1] << 12) | (data[2] << 4) | (data[3] >> 4);
-    uint32_t temp = ((data[3] & 0x0F) << 16) | (data[4] << 8) | data[5];
+    // Đọc 6 byte dữ liệu
+    if (i2c_master_read_from_device(I2C_MASTER_NUM, AHT20_ADDR, data, 6, 1000 / portTICK_PERIOD_MS) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to read sensor data from AHT20");
+        return;
+    }
+
+    uint32_t hum = ((data[1] << 12) | (data[2] << 4) | (data[3] >> 4));
+    uint32_t temp = (((data[3] & 0x0F) << 16) | (data[4] << 8) | data[5]);
 
     *humidity = (float)hum * 100.0 / 1048576.0;
     *temperature = (float)temp * 200.0 / 1048576.0 - 50.0;
 
+    if (hum == 0 && temp == 0) {
+        ESP_LOGW(TAG, "[Sensor] AHT20 -> No sensor signal detected!");
+    }
+
     ESP_LOGI(TAG, "Temperature: %.2f °C, Humidity: %.2f %%", *temperature, *humidity);
 }
+
     

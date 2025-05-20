@@ -16,4 +16,5 @@ esp_err_t firebase_read(const char *path, char *buffer, size_t buffer_size);
 // Hàm gửi dữ liệu lên Firebase (được gọi từ task cảm biến)
 esp_err_t send_data_to_firebase(const char *data_json);
 
+esp_err_t firebase_post(const char *path, const char *data);
 #endif // CONNECT_FB_H
