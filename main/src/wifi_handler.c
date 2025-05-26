@@ -15,7 +15,6 @@
 #include "nvs_handle.h"
 #include "mesh_handler.h"
 #include "sys_config.h"
-#include "espNow_handler.h"
 
 #include "http_server.h"
 static const char *TAG_WIFI = "Wifi_Handler";

@@ -39,6 +39,8 @@ extern esp_netif_t *sta_netif;
 int mesh_layer = -1;
 char mesh_root_addr[20];
 
+bool mesh_network_ready = false;
+
 static mesh_addr_t mesh_parent_addr;
 
 bool is_mesh_root = false;
@@ -63,8 +65,10 @@ void mesh_event_handler(void *arg, esp_event_base_t event_base,
     break;
     case MESH_EVENT_PARENT_DISCONNECTED:
     {
-
-        ESP_LOGI(TAG, "<MESH_EVENT_PARENT_DISCONNECTED>");
+        mesh_event_disconnected_t *disconnected = (mesh_event_disconnected_t *)event_data;
+        ESP_LOGI(TAG, "<MESH_EVENT_PARENT_DISCONNECTED>reason:%d", disconnected->reason);
+        mesh_layer = -1;
+        mesh_network_ready = false;
     }
     break;
     case MESH_EVENT_STOPPED:
@@ -120,7 +124,7 @@ void mesh_event_handler(void *arg, esp_event_base_t event_base,
         memcpy(&mesh_parent_addr.addr, connected->connected.bssid, 6);
 
         is_mesh_root = esp_mesh_is_root();
-
+        mesh_network_ready = true;
         ESP_LOGI(TAG,
                  "<MESH_EVENT_PARENT_CONNECTED>layer:%d-->%d, parent:" MACSTR "%s, ID:" MACSTR "",
                  last_layer, mesh_layer, MAC2STR(mesh_parent_addr.addr),
@@ -199,6 +203,25 @@ void mesh_event_handler(void *arg, esp_event_base_t event_base,
     }
 }
 
+void mesh_reconnect(void)
+{
+    ESP_LOGI(TAG, "Disconnecting and reconnecting mesh network...");
+    mesh_network_ready = false;
+
+    esp_err_t err = esp_mesh_stop();
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Error stopping mesh: %s", esp_err_to_name(err));
+        mesh_network_ready = true;
+        return;
+    }
+
+    // Wait before reconnecting
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    mesh_app_start();
+}
+
 void check_system_memory()
 {
     printf("Free heap: %u bytes\n", (unsigned int)esp_get_free_heap_size());
@@ -212,9 +235,11 @@ void mesh_app_start()
     check_system_memory();
 
     // Configure ESP-MESH network
-    if (sta_netif != NULL)
+    esp_netif_dhcp_status_t dhcp_status;
+    esp_netif_dhcpc_get_status(sta_netif, &dhcp_status);
+    if (dhcp_status == ESP_NETIF_DHCP_STARTED)
     {
-        ESP_ERROR_CHECK(esp_netif_dhcpc_stop(sta_netif));
+        esp_netif_dhcpc_stop(sta_netif); // Chỉ stop nếu đang chạy
     }
     else
     {

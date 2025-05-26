@@ -5,7 +5,6 @@
 #include "read_sensor.h"
 
 // Buffer size for JSON communication
-#define JSON_BUFFER_SIZE 1024
 
 // Function declarations
 esp_err_t send_json_to_root(PotState_t *pot);

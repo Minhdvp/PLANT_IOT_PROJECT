@@ -1,16 +1,19 @@
 {
   "C_Cpp.intelliSenseEngine": "default",
-  "idf.espIdfPathWin": "c:\\Espressif\\frameworks\\esp-idf-v5.3.2",
+  "idf.espIdfPathWin": "d:\\IDF\\esp-idf\\v5.2.2\\esp-idf",
   "idf.pythonInstallPath": "D:\\APP\\Espressif\\tools\\idf-python\\3.11.2\\python.exe",
-  "idf.openOcdConfigs": ["board/esp32-wrover-kit-3.3v.cfg"],
+  "idf.openOcdConfigs": [
+    "board/esp32-wrover-kit-3.3v.cfg"
+  ],
   "idf.toolsPathWin": "D:\\APP\\Espressif",
-  "idf.portWin": "COM8",
+  "idf.portWin": "COM4",
   "idf.flashType": "UART",
   "files.associations": {
     "esp_log.h": "c",
     "rtdb.h": "c",
     "mesh_send.h": "c",
     "i2c.h": "c",
-    "pump_logger.h": "c"
+    "pump_logger.h": "c",
+    "read_sensor.h": "c"
   }
 }

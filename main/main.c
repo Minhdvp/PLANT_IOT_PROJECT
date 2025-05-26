@@ -16,8 +16,9 @@
 extern EventGroupHandle_t s_wifi_event_group;
 static const char *TAG = "MAIN";
 
-void init_sntp(void) {
-    ESP_LOGI(TAG, "Khởi tạo SNTP");
+void init_sntp(void)
+{
+    ESP_LOGI(TAG, "Init SNTP");
     esp_sntp_setoperatingmode(ESP_SNTP_OPMODE_POLL);
     esp_sntp_setservername(0, "pool.ntp.org");
     esp_sntp_init();
@@ -28,18 +29,21 @@ void init_sntp(void) {
 
     int retry = 0;
     const int retry_count = 10;
-    while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && retry < retry_count) {
-        ESP_LOGI(TAG, "Đang chờ đồng bộ thời gian... (%d/%d)", retry, retry_count);
+    while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && retry < retry_count)
+    {
+        ESP_LOGI(TAG, "Waiting for synchronous... (%d/%d)", retry, retry_count);
         vTaskDelay(2000 / portTICK_PERIOD_MS);
         retry++;
     }
-    if (retry < retry_count) {
-        ESP_LOGI(TAG, "Đồng bộ thời gian thành công");
-    } else {
-        ESP_LOGE(TAG, "Không thể đồng bộ thời gian");
+    if (retry < retry_count)
+    {
+        ESP_LOGI(TAG, "Synchronous Success");
+    }
+    else
+    {
+        ESP_LOGE(TAG, "Synchronous failed");
     }
 }
-
 
 void app_main(void)
 {
@@ -52,7 +56,7 @@ void app_main(void)
                                            pdFALSE,
                                            pdFALSE,
                                            portMAX_DELAY);
-    
+
     init_sntp();
     disible_event();
 #else

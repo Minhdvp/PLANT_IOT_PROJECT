@@ -25,6 +25,7 @@ extern bool is_mesh_root;
 void mesh_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
 void ip_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
 void check_system_memory(void);
+void mesh_reconnect(void);
 void mesh_app_start(void);
 
 #endif // MESH_HANDLER_H

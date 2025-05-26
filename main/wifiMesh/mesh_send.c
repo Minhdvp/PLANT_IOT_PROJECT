@@ -43,7 +43,7 @@ esp_err_t send_json_to_root(PotState_t *pot)
     cJSON_AddNumberToObject(root, "Temperature", pot->temperature);
     cJSON_AddNumberToObject(root, "Humidity", pot->humidity);
     cJSON_AddNumberToObject(root, "Soil_moisture", pot->soil_moisture);
-    cJSON_AddNumberToObject(root, "RainLevel", pot->rain_level);
+    cJSON_AddNumberToObject(root, "RainLevel", pot->water_level);
     cJSON_AddBoolToObject(root, "Status", pot->pump_running);
     cJSON_AddBoolToObject(root, "Warning", pot->warning);
     char *json_string = cJSON_Print(root);
@@ -133,23 +133,27 @@ void task_mesh_rx_json(void *pvParameter)
 /**
  * Hàm chổ này dùng để gửi chuyển Json lên Firebase
  */
-void process_received_json(char *json_string) {
+void process_received_json(char *json_string)
+{
     // Kiểm tra JSON hợp lệ
-    if (json_string == NULL || strlen(json_string) == 0) {
+    if (json_string == NULL || strlen(json_string) == 0)
+    {
         ESP_LOGE(TAG_SEND, "Chuỗi JSON không hợp lệ hoặc rỗng");
         return;
     }
 
     // Phân tích JSON
     cJSON *json = cJSON_Parse(json_string);
-    if (json == NULL) {
+    if (json == NULL)
+    {
         ESP_LOGE(TAG_SEND, "Lỗi phân tích JSON: %s", cJSON_GetErrorPtr());
         return;
     }
 
     // Gửi JSON gốc lên /SensorData (không thêm Timestamp)
     char *new_json_string = cJSON_PrintUnformatted(json);
-    if (new_json_string == NULL) {
+    if (new_json_string == NULL)
+    {
         ESP_LOGE(TAG_SEND, "Lỗi tạo chuỗi JSON mới cho /SensorData");
         cJSON_Delete(json);
         return;
@@ -157,15 +161,19 @@ void process_received_json(char *json_string) {
 
     ESP_LOGI(TAG_SEND, "Gửi JSON lên /SensorData: %s", new_json_string);
     esp_err_t err = firebase_write("/SensorData", new_json_string);
-    if (err == ESP_OK) {
+    if (err == ESP_OK)
+    {
         ESP_LOGI(TAG_SEND, "Gửi thành công lên /SensorData");
-    } else {
+    }
+    else
+    {
         ESP_LOGE(TAG_SEND, "Lỗi gửi lên /SensorData: %s", esp_err_to_name(err));
     }
 
     // Kiểm tra trạng thái máy bơm
     cJSON *status = cJSON_GetObjectItem(json, "Status");
-    if (status && cJSON_IsTrue(status)) {
+    if (status && cJSON_IsTrue(status))
+    {
         // Lấy thời gian thực
         time_t now;
         struct tm timeinfo;
@@ -178,7 +186,8 @@ void process_received_json(char *json_string) {
         cJSON *pump_json = cJSON_CreateObject();
         cJSON_AddStringToObject(pump_json, "PumpOnTime", timestamp);
         char *pump_json_string = cJSON_PrintUnformatted(pump_json);
-        if (pump_json_string == NULL) {
+        if (pump_json_string == NULL)
+        {
             ESP_LOGE(TAG_SEND, "Lỗi tạo chuỗi JSON cho /Water_Pump");
             cJSON_Delete(pump_json);
             cJSON_free(new_json_string);
@@ -189,9 +198,12 @@ void process_received_json(char *json_string) {
         // Gửi lên /Water_Pump
         ESP_LOGI(TAG_SEND, "Gửi JSON lên /Water_Pump: %s", pump_json_string);
         err = firebase_post("/Water_Pump", pump_json_string);
-        if (err == ESP_OK) {
+        if (err == ESP_OK)
+        {
             ESP_LOGI(TAG_SEND, "Gửi thành công lên /Water_Pump");
-        } else {
+        }
+        else
+        {
             ESP_LOGE(TAG_SEND, "Lỗi gửi lên /Water_Pump: %s", esp_err_to_name(err));
         }
 
